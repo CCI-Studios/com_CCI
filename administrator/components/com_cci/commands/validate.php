@@ -5,34 +5,13 @@ class ComCCICommandValidate extends KCommand
 
 	public function _controllerBeforeSave(KCommandContext $context)
 	{
-		$identifier = (string)$context->caller->getIdentifier();
-		$model =	KFactory::get((string)$context->caller->getModel());
-		
-		if (method_exists($model, 'validate')) {
-			$data = $context->data;
-			$validationErrors = $model->validate($data);
-			
-			if (!empty($validationErrors)) {
-				$tempData = $data;
-				unset($tempData['_token']);
-				KRequest::set('session.'.$identifier, serialize((array)$tempData->getIterator()));
-				
-				$referrer = KRequest::referrer();
-				$query = $referrer->getQuery(true);
-				$query['id'] = $model->getState()->id;
-				$referrer->setQuery($query);
-				
-				$context->caller->setRedirect((string)$referrer, implode('<br/>', $validationErrors), 'error');
-				return false;
-			}
-		}
-		
-		return true;
+		return $this->_validateData($context);
 	}
 	
 	public function _controllerBeforeApply(KCommandContext $context)
 	{
-		return $this->_controllerBeforeSave($context);
+
+		return $this->_validateData($context);
 	}
 	
 	public function _controllerBeforeRead(KCommandContext $context)
@@ -50,6 +29,33 @@ class ComCCICommandValidate extends KCommand
 			}
 			
 			KRequest::set('session.'.$identifier, null);
+		}
+		
+		return true;
+	}
+	
+	protected function _validateData(KCommandContext $context)
+	{
+		$identifier = (string)$context->caller->getIdentifier();
+		$model =	KFactory::get((string)$context->caller->getModel());
+		
+		if (method_exists($model, 'validate')) {
+			$data = $context->data;
+			$validationErrors = $model->validate($data);
+				
+			if (!empty($validationErrors)) {
+				$tempData = $data;
+				unset($tempData['_token']);
+				KRequest::set('session.'.$identifier, serialize((array)$tempData->getIterator()));
+		
+				$referrer = KRequest::referrer();
+				$query = $referrer->getQuery(true);
+				$query['id'] = $model->getState()->id;
+				$referrer->setQuery($query);
+		
+				$context->caller->setRedirect((string)$referrer, implode('<br/>', $validationErrors), 'error');
+				return false;
+			}
 		}
 		
 		return true;
